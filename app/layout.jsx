@@ -1,9 +1,8 @@
-import { Archivo, Newsreader } from 'next/font/google';
+import { Archivo } from 'next/font/google';
 import './globals.css';
 import { site } from '@/lib/site';
 
 const display = Archivo({ subsets: ['latin'], axes: ['wdth'], weight: 'variable', variable: '--f-display', display: 'swap' });
-const serif = Newsreader({ subsets: ['latin'], variable: '--f-serif', display: 'swap' });
 
 export const metadata = {
   title: `${site.name} | ${site.tagline} Press Kit`,
@@ -13,7 +12,7 @@ export const viewport = { width: 'device-width', initialScale: 1, themeColor: '#
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es" className={`${display.variable} ${serif.variable}`}>
+    <html lang="es" className={display.variable}>
       <body>{children}</body>
     </html>
   );
