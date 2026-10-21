@@ -1,4 +1,4 @@
-import { all, put } from '@/lib/db';
+import { all, put, ensureSeed } from '@/lib/db';
 import { notify } from '@/lib/notify';
 import { site } from '@/lib/site';
 
@@ -25,8 +25,9 @@ export async function POST(req) {
   if (b.date < new Date().toISOString().slice(0, 10)) return Response.json({ error: 'La fecha ya paso' }, { status: 400 });
 
   try {
+    await ensureSeed(site.blockedDates);
     const [blocked, bookings] = await Promise.all([all('blocked'), all('bookings')]);
-    const taken = blocked[b.date] || site.blockedDates.some((x) => x.date === b.date) || Object.values(bookings).some((x) => x.date === b.date && x.status === 'confirmed');
+    const taken = blocked[b.date] || Object.values(bookings).some((x) => x.date === b.date && x.status === 'confirmed');
     if (taken) return Response.json({ error: 'Esa fecha ya esta ocupada' }, { status: 409 });
 
     const id = crypto.randomUUID();

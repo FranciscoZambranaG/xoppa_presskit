@@ -1,10 +1,12 @@
-import { all, put, remove } from '@/lib/db';
+import { all, put, remove, ensureSeed } from '@/lib/db';
+import { site } from '@/lib/site';
 import { isAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req) {
   if (!isAdmin(req)) return Response.json({ error: 'No autorizado' }, { status: 401 });
+  await ensureSeed(site.blockedDates);
   const [blocked, bookings] = await Promise.all([all('blocked'), all('bookings')]);
   return Response.json({
     blocked,

@@ -120,3 +120,8 @@ footer small { font: 14px var(--s); color: var(--mute); }
   .cal-wrap { grid-template-columns: 1fr; }
   .cal, .book, .panel { padding: 20px; }
 }
+
+.admin.wide { max-width: 1000px; }
+.admin .tabs { margin: 0; }
+.admin .tabs button.on { background: var(--fire); color: #000; border-color: var(--fire); }
+.admin .book .panel { margin-bottom: 12px; padding: 16px; }
