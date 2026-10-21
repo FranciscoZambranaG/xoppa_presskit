@@ -5,6 +5,17 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
 const DAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 const iso = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
+// Boton de eliminar con confirmacion en pantalla (sin ventanas del navegador)
+function Del({ id, ask, setAsk, onYes, text }) {
+  if (ask !== id) return <button className="btn danger" onClick={() => setAsk(id)}>{text}</button>;
+  return (
+    <span className="row">
+      <button className="btn danger on" onClick={onYes}>Si, eliminar</button>
+      <button className="btn" onClick={() => setAsk(null)}>Cancelar</button>
+    </span>
+  );
+}
+
 export default function Admin() {
   const [pw, setPw] = useState('');
   const [data, setData] = useState(null);
@@ -14,7 +25,7 @@ export default function Admin() {
   const [view, setView] = useState({ y: now.getFullYear(), m: now.getMonth() });
   const [sel, setSel] = useState(null);
   const [label, setLabel] = useState('');
-  const [block, setBlock] = useState({ date: '', label: '' });
+  const [ask, setAsk] = useState(null); // elemento pendiente de confirmar borrado
 
   const call = (method, body) => fetch('/api/admin', { method, headers: { 'content-type': 'application/json', 'x-admin-password': pw }, body: body && JSON.stringify(body) });
   async function load(e) {
@@ -23,7 +34,7 @@ export default function Admin() {
     if (!r.ok) return setErr('Clave incorrecta');
     setErr(''); setData(await r.json());
   }
-  const act = async (body) => { await call('POST', body); load(); };
+  const act = async (body) => { await call('POST', body); setAsk(null); load(); };
 
   if (!data) return (
     <main className="admin"><form onSubmit={load}>
@@ -54,8 +65,8 @@ export default function Admin() {
   return (
     <main className="admin wide">
       <div className="row tabs">
-        <button className={tab === 'reservas' ? 'on' : ''} onClick={() => setTab('reservas')}>Reservas</button>
-        <button className={tab === 'calendario' ? 'on' : ''} onClick={() => setTab('calendario')}>Calendario</button>
+        <button className={`btn ${tab === 'reservas' ? 'on' : ''}`} onClick={() => setTab('reservas')}>Reservas</button>
+        <button className={`btn ${tab === 'calendario' ? 'on' : ''}`} onClick={() => setTab('calendario')}>Calendario</button>
       </div>
 
       {tab === 'calendario' && (
@@ -77,31 +88,37 @@ export default function Admin() {
             <p className="legend"><i className="k busy" /> Ocupada <i className="k pending" /> Solicitada <i className="k free" /> Libre</p>
           </div>
 
-          <div className="book">
-            <h3>{sel ? sel : 'Elige una fecha'}</h3>
-            {sel && !entry && <p>Fecha libre.</p>}
+        </div>
+      )}
+
+      {tab === 'calendario' && sel && (
+        <div className="modal-bg" onClick={() => { setSel(null); setAsk(null); }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>{sel}</h3>
+            {!entry && <p>Fecha libre. Puedes bloquearla:</p>}
             {entry?.blocked && (
-              <div className="panel">
+              <div className="item blocked">
                 <p><b>Bloqueada</b>{entry.blocked.label && ` · ${entry.blocked.label}`}</p>
-                <div className="row"><button onClick={() => act({ action: 'unblock', date: sel })}>Liberar fecha</button></div>
+                <Del id="blocked" ask={ask} setAsk={setAsk} onYes={() => act({ action: 'unblock', date: sel })} text="Eliminar fecha" />
               </div>
             )}
             {entry?.bookings.map((b) => (
-              <div key={b.id} className={`panel st-${b.status}`}>
+              <div key={b.id} className={`item st-${b.status}`}>
                 <p><b>{b.eventName}</b> · {b.status}<br />{b.name} · {b.email} {b.whatsapp}</p>
                 <div className="row">
-                  {b.status !== 'confirmed' && <button onClick={() => act({ action: 'status', id: b.id, status: 'confirmed' })}>Confirmar</button>}
-                  {b.status !== 'rejected' && <button onClick={() => act({ action: 'status', id: b.id, status: 'rejected' })}>Rechazar</button>}
-                  <button onClick={() => act({ action: 'delete', id: b.id })}>Borrar y liberar</button>
+                  {b.status !== 'confirmed' && <button className="btn" onClick={() => act({ action: 'status', id: b.id, status: 'confirmed' })}>Confirmar</button>}
+                  {b.status === 'pending' && <button className="btn" onClick={() => act({ action: 'status', id: b.id, status: 'rejected' })}>Rechazar</button>}
+                  <Del id={b.id} ask={ask} setAsk={setAsk} onYes={() => act({ action: 'delete', id: b.id })} text="Eliminar reserva" />
                 </div>
               </div>
             ))}
-            {sel && !entry?.blocked && (
+            {!entry?.blocked && (
               <div className="row">
                 <input placeholder="Nota (opcional)" value={label} onChange={(e) => setLabel(e.target.value)} />
-                <button onClick={() => act({ action: 'block', date: sel, label })}>Bloquear fecha</button>
+                <button className="btn" onClick={() => act({ action: 'block', date: sel, label })}>Bloquear fecha</button>
               </div>
             )}
+            <button className="btn" onClick={() => { setSel(null); setAsk(null); }}>Cerrar</button>
           </div>
         </div>
       )}
@@ -116,20 +133,11 @@ export default function Admin() {
               <p>{b.venue} {b.city && `· ${b.city}`}<br />{b.name} · {b.email} {b.whatsapp}</p>
               {b.message && <p className="bio">{b.message}</p>}
               <div className="row">
-                <button onClick={() => act({ action: 'status', id: b.id, status: 'confirmed' })}>Confirmar</button>
-                <button onClick={() => act({ action: 'status', id: b.id, status: 'rejected' })}>Rechazar</button>
-                <button onClick={() => act({ action: 'delete', id: b.id })}>Borrar</button>
+                <button className="btn" onClick={() => act({ action: 'status', id: b.id, status: 'confirmed' })}>Confirmar</button>
+                <button className="btn" onClick={() => act({ action: 'status', id: b.id, status: 'rejected' })}>Rechazar</button>
+                <button className="btn" onClick={() => act({ action: 'delete', id: b.id })}>Borrar</button>
               </div>
             </article>
-          ))}
-          <h1>FECHAS BLOQUEADAS</h1>
-          <div className="row">
-            <input type="date" value={block.date} onChange={(e) => setBlock({ ...block, date: e.target.value })} />
-            <input placeholder="Nota (opcional)" value={block.label} onChange={(e) => setBlock({ ...block, label: e.target.value })} />
-            <button onClick={() => block.date && act({ action: 'block', ...block })}>Bloquear</button>
-          </div>
-          {Object.entries(data.blocked).sort().map(([d, v]) => (
-            <p key={d}>{d} {v.label && `· ${v.label}`} <button onClick={() => act({ action: 'unblock', date: d })}>Liberar</button></p>
           ))}
         </>
       )}
