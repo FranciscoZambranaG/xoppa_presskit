@@ -14,8 +14,9 @@ export default function Calendar() {
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState(empty);
   const [state, setState] = useState({ status: 'idle', msg: '' });
+  const [loadErr, setLoadErr] = useState(false);
 
-  const load = () => fetch('/api/availability', { cache: 'no-store' }).then((r) => r.json()).then((d) => setDates(d.dates)).catch(() => {});
+  const load = () => fetch(`/api/availability?t=${Date.now()}`, { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(); return r.json(); }).then((d) => { setDates(d.dates); setLoadErr(false); }).catch(() => setLoadErr(true));
   useEffect(() => { load(); }, []);
 
   const first = (new Date(view.y, view.m, 1).getDay() + 6) % 7; // semana empieza en lunes
@@ -53,16 +54,16 @@ export default function Calendar() {
             const key = iso(view.y, view.m, d);
             const st = dates[key];
             const past = key < today;
-            const disabled = past || st === 'busy';
             return (
-              <button key={i} type="button" disabled={disabled}
+              <button key={i} type="button" disabled={past} aria-disabled={st === 'busy'}
                 className={`day ${st || ''} ${selected === key ? 'sel' : ''}`}
-                onClick={() => { setSelected(key); setState({ status: 'idle', msg: '' }); }}>
+                onClick={() => { if (st === 'busy') return; setSelected(key); setState({ status: 'idle', msg: '' }); }}>
                 {d}
               </button>
             );
           })}
         </div>
+        {loadErr && <p className="note error">No se pudo cargar la disponibilidad. <button type="button" className="btn" onClick={load}>Reintentar</button></p>}
         <p className="legend"><i className="k busy" /> Ocupada <i className="k pending" /> Solicitada <i className="k free" /> Libre</p>
       </div>
 

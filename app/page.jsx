@@ -10,7 +10,10 @@ export default function Page() {
   return (
     <>
       <header className="top">
-        <a className="logo" href="#presskit" aria-label={site.name}><img src="/media/logo-xoppa.png" alt={site.name} /></a>
+        <a className="logo" href="#presskit" aria-label={site.name}><picture>
+            <source media="(max-width: 900px)" srcSet="/media/logo-x.png" />
+            <img src="/media/logo-xoppa.png" alt={site.name} />
+          </picture></a>
         <nav>{nav.map(([l, id]) => <a key={id} href={`#${id}`}>{l}</a>)}</nav>
       </header>
 
